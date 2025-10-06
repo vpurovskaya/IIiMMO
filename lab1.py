@@ -89,4 +89,5 @@ print(df.dtypes.value_counts())
 
 print(f"\nНазвания столбцов после обработки ({len(df.columns)} шт.):")
 for i, col in enumerate(df.columns, 1):
+
     print(f"{i:2d}. {col}")
