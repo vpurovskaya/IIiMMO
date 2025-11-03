@@ -75,11 +75,15 @@ if len(categorical_columns) > 0:
             df[column + '_freq'] = df[column].map(freq_encoding)
             print(f"Применили частотное кодирование для {column} (уникальных значений: {df[column].nunique()})")
         else:
-            from sklearn.preprocessing import LabelEncoder
-
-            le = LabelEncoder()
-            df[column + '_label'] = le.fit_transform(df[column])
-            print(f"Применили Label Encoding для {column} (уникальных значений: {df[column].nunique()})")
+            if column == 'Destination':
+                destination_dummies = pd.get_dummies(df[column], prefix='Destination')
+                df = pd.concat([df, destination_dummies], axis=1)
+                print(f"Применили One-Hot Encoding для {column} (уникальных значений: {df[column].nunique()})")
+            else:
+                from sklearn.preprocessing import LabelEncoder
+                le = LabelEncoder()
+                df[column + '_label'] = le.fit_transform(df[column])
+                print(f"Применили Label Encoding для {column} (уникальных значений: {df[column].nunique()})")
 
     df.drop(columns=categorical_columns, inplace=True)
     print("Оптимизированное преобразование категориальных данных применено успешно")
@@ -92,7 +96,8 @@ print()
 print("Удаляем ненужные столбцы...")
 
 columns_to_remove = [
-    'CryoSleep', 'VIP', 'Transported', 'PassengerId_freq', 'Cabin_freq', 'Name_freq'
+    'CryoSleep', 'VIP', 'Transported', 'PassengerId_freq',
+    'HomePlanet_label', 'Cabin_freq', 'Name_freq'
 ]
 
 existing_columns_to_remove = [col for col in columns_to_remove if col in df.columns]
@@ -119,6 +124,9 @@ print(df.dtypes.value_counts())
 print(f"\nНазвания столбцов после обработки ({len(df.columns)} шт.):")
 for i, col in enumerate(df.columns, 1):
     print(f"{i:2d}. {col}")
+
+destination_cols = [col for col in df.columns if 'Destination' in col]
+print(f"\nСтолбцы Destination: {destination_cols}")
 
 import os
 
