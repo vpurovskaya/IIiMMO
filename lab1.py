@@ -1,12 +1,15 @@
 import pandas as pd
+import numpy as np
 
 df = pd.read_csv("train.csv")
 
-print("Первые 5 строк датасета:")
+df = df.head(500)
+
+print("Первые 5 строк датасета (из 500):")
 print(df.head())
 print()
 
-print("Информация о датасете:")
+print("Информация о датасете (500 строк):")
 print(df.info())
 print()
 
@@ -66,19 +69,46 @@ categorical_columns = df.select_dtypes(include='object').columns
 if len(categorical_columns) > 0:
     print(f"Преобразуем столбцы: {list(categorical_columns)}")
 
-    df = pd.get_dummies(df, columns=categorical_columns, drop_first=True)
-    print("One-Hot Encoding применен успешно")
+    for column in categorical_columns:
+        if df[column].nunique() > 10:
+            freq_encoding = df[column].value_counts().to_dict()
+            df[column + '_freq'] = df[column].map(freq_encoding)
+            print(f"Применили частотное кодирование для {column} (уникальных значений: {df[column].nunique()})")
+        else:
+            from sklearn.preprocessing import LabelEncoder
+
+            le = LabelEncoder()
+            df[column + '_label'] = le.fit_transform(df[column])
+            print(f"Применили Label Encoding для {column} (уникальных значений: {df[column].nunique()})")
+
+    df.drop(columns=categorical_columns, inplace=True)
+    print("Оптимизированное преобразование категориальных данных применено успешно")
 else:
     print("Категориальных столбцов для преобразования нет")
 
 print("Преобразование категориальных данных завершено")
 print()
 
+print("Удаляем ненужные столбцы...")
+
+columns_to_remove = [
+    'CryoSleep', 'VIP', 'Transported', 'PassengerId_freq',
+    'HomePlanet_label', 'Cabin_freq', 'Destination_label', 'Name_freq'
+]
+
+existing_columns_to_remove = [col for col in columns_to_remove if col in df.columns]
+
+if existing_columns_to_remove:
+    df.drop(columns=existing_columns_to_remove, inplace=True)
+    print(f"Удалены столбцы: {existing_columns_to_remove}")
+else:
+    print("Ненужные столбцы не найдены в датафрейме")
+
 print("Итоговые данные после предобработки:")
 print(df.head())
 print(f"\nРазмер данных после обработки: {df.shape}")
 
-df.to_csv("processed_data.csv", index=False)
+df.to_csv("processed_data.csv", index=False, encoding='utf-8-sig')
 print("\nОбработанные данные сохранены в файл 'processed_data.csv'")
 
 print("\nДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ")
@@ -90,3 +120,9 @@ print(df.dtypes.value_counts())
 print(f"\nНазвания столбцов после обработки ({len(df.columns)} шт.):")
 for i, col in enumerate(df.columns, 1):
     print(f"{i:2d}. {col}")
+
+import os
+
+if os.path.exists("processed_data.csv"):
+    file_size = os.path.getsize("processed_data.csv") / (1024 * 1024)
+    print(f"\nРазмер файла: {file_size:.2f} МБ")
