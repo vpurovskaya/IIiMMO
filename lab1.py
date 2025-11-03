@@ -92,8 +92,7 @@ print()
 print("Удаляем ненужные столбцы...")
 
 columns_to_remove = [
-    'CryoSleep', 'VIP', 'Transported', 'PassengerId_freq',
-    'HomePlanet_label', 'Cabin_freq', 'Destination_label', 'Name_freq'
+    'CryoSleep', 'VIP', 'Transported', 'PassengerId_freq', 'Cabin_freq', 'Name_freq'
 ]
 
 existing_columns_to_remove = [col for col in columns_to_remove if col in df.columns]
