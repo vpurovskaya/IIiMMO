@@ -96,8 +96,12 @@ print()
 print("Удаляем ненужные столбцы...")
 
 columns_to_remove = [
-    'CryoSleep', 'VIP', 'Transported', 'PassengerId_freq',
-    'HomePlanet_label', 'Cabin_freq', 'Name_freq'
+    'Id', 'Alley', 'PoolQC', 'Fence', 'MiscFeature', 'MiscVal',
+    'MoSold', 'YrSold', 'SaleType', 'SaleCondition', 'GarageYrBlt', 'LotFrontage',
+    'Street', 'LandContour', 'Utilities', 'LandSlope', 'Condition2',
+    'RoofMatl', 'Heating', 'Electrical', 'LowQualFinSF', 'BsmtHalfBath',
+    '3SsnPorch', 'ScreenPorch', 'PoolArea', 'BsmtFinSF2', 'BsmtCond',
+    'GarageQual', 'GarageCond'
 ]
 
 existing_columns_to_remove = [col for col in columns_to_remove if col in df.columns]
