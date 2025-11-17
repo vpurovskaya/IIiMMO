@@ -2,116 +2,104 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression, LogisticRegression
-from sklearn.metrics import mean_squared_error, accuracy_score, confusion_matrix
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
+from sklearn.metrics import mean_squared_error, r2_score, accuracy_score, classification_report
+import matplotlib.pyplot as plt
 
-print("\n1. ЗАГРУЗКА ДАННЫХ")
-try:
-    df = pd.read_csv("processed_data.csv")
-    print("Данные загружены успешно")
-    print(f"Размер данных: {df.shape}")
-except FileNotFoundError:
-    print("Файл processed_data.csv не найден!")
-    exit()
+df = pd.read_csv('processed_data.csv')
 
-print("\n2. АНАЛИЗ СТРУКТУРЫ ДАННЫХ")
+X = df.drop('SalePrice', axis=1)
+y = df['SalePrice']
 
-numeric_columns = df.select_dtypes(include=[np.number]).columns
-print(f"Найдено числовых колонок: {len(numeric_columns)}")
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-potential_targets = [col for col in numeric_columns if df[col].nunique() > 2]
-if potential_targets:
-    regression_target = potential_targets[0]
+print(f"1. РАЗДЕЛЕНИЕ ДАННЫХ:")
+print(f"Обучающая выборка: {X_train.shape[0]} samples")
+print(f"Тестовая выборка: {X_test.shape[0]} samples")
+
+print("\n2. ЗАДАЧА РЕГРЕССИИ - ПРЕДСКАЗАНИЕ SalePrice")
+
+lr_model = LinearRegression()
+lr_model.fit(X_train, y_train)
+y_pred_lr = lr_model.predict(X_test)
+
+rf_reg_model = RandomForestRegressor(n_estimators=100, random_state=42)
+rf_reg_model.fit(X_train, y_train)
+y_pred_rf = rf_reg_model.predict(X_test)
+
+print("\n3. ОЦЕНКА РЕГРЕССИОННЫХ МОДЕЛЕЙ:")
+
+mse_lr = mean_squared_error(y_test, y_pred_lr)
+r2_lr = r2_score(y_test, y_pred_lr)
+
+mse_rf = mean_squared_error(y_test, y_pred_rf)
+r2_rf = r2_score(y_test, y_pred_rf)
+
+print(f"Линейная регрессия - MSE: {mse_lr:.4f}, R²: {r2_lr:.4f}")
+print(f"Случайный лес - MSE: {mse_rf:.4f}, R²: {r2_rf:.4f}")
+
+plt.figure(figsize=(12, 5))
+
+plt.subplot(1, 2, 1)
+plt.scatter(y_test, y_pred_lr, alpha=0.5)
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', lw=2)
+plt.xlabel('Реальные значения')
+plt.ylabel('Предсказанные значения')
+plt.title(f'Линейная регрессия (R² = {r2_lr:.4f})')
+
+plt.subplot(1, 2, 2)
+plt.scatter(y_test, y_pred_rf, alpha=0.5)
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', lw=2)
+plt.xlabel('Реальные значения')
+plt.ylabel('Предсказанные значения')
+plt.title(f'Случайный лес (R² = {r2_rf:.4f})')
+
+plt.tight_layout()
+plt.show()
+
+print("\nАНАЛИЗ РЕГРЕССИИ:")
+if r2_rf < 0.7:
+    print("Результаты можно улучшить:")
+    print("- Подбор гиперпараметров моделей")
+    print("- Использование градиентного бустинга")
+    print("- Удаление мультиколлинеарных признаков")
 else:
-    regression_target = numeric_columns[0]
+    print("Хорошие результаты регрессии!")
 
-print(f"Целевая переменная для регрессии: '{regression_target}'")
+print("\n4. ЗАДАЧА КЛАССИФИКАЦИИ")
 
-binary_columns = [col for col in numeric_columns if df[col].nunique() == 2]
-if binary_columns:
-    classification_target = binary_columns[0]
-    print(f"Целевая переменная для классификации: '{classification_target}'")
-else:
-    classification_target = 'Age_Category'
-    median_age = df[regression_target].median()
-    df[classification_target] = (df[regression_target] > median_age).astype(int)
-    print(f"Создана целевая переменная для классификации: '{classification_target}'")
-
-print("\n3. РАЗДЕЛЕНИЕ ДАННЫХ")
-
-features = [col for col in df.columns if col not in [regression_target, classification_target]]
-X = df[features]
-
-y_reg = df[regression_target]
-y_clf = df[classification_target]
-
-print(f"Признаки: {X.shape[1]} колонок")
-print(f"Наблюдения: {X.shape[0]} строк")
-
-X_train_reg, X_test_reg, y_train_reg, y_test_reg = train_test_split(
-    X, y_reg, test_size=0.3, random_state=42
-)
+price_median = df['SalePrice'].median()
+y_class = (df['SalePrice'] > price_median).astype(int)
 
 X_train_clf, X_test_clf, y_train_clf, y_test_clf = train_test_split(
-    X, y_clf, test_size=0.3, random_state=42, stratify=y_clf
+    X, y_class, test_size=0.2, random_state=42, stratify=y_class
 )
-
-print(f"Обучающая выборка: {X_train_reg.shape[0]} наблюдений")
-print(f"Тестовая выборка: {X_test_reg.shape[0]} наблюдений")
-
-print(f"\n4. ЗАДАЧА РЕГРЕССИИ (предсказание '{regression_target}')")
-
-linear_model = LinearRegression()
-linear_model.fit(X_train_reg, y_train_reg)
-
-y_pred_reg = linear_model.predict(X_test_reg)
-
-mse = mean_squared_error(y_test_reg, y_pred_reg)
-r2 = linear_model.score(X_test_reg, y_test_reg)
-
-print(f"Среднеквадратичная ошибка (MSE): {mse:.4f}")
-print(f"Коэффициент детерминации (R²): {r2:.4f}")
-
-print(f"\n5. ЗАДАЧА КЛАССИФИКАЦИИ (предсказание '{classification_target}')")
-
-print("Распределение классов:")
-class_counts = y_clf.value_counts()
-for class_val, count in class_counts.items():
-    percentage = count / len(y_clf) * 100
-    print(f"  Класс {class_val}: {count} наблюдений ({percentage:.1f}%)")
 
 logreg_model = LogisticRegression(random_state=42, max_iter=1000)
 logreg_model.fit(X_train_clf, y_train_clf)
+y_pred_logreg = logreg_model.predict(X_test_clf)
 
-y_pred_clf = logreg_model.predict(X_test_clf)
+rf_clf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+rf_clf_model.fit(X_train_clf, y_train_clf)
+y_pred_rf_clf = rf_clf_model.predict(X_test_clf)
 
-accuracy = accuracy_score(y_test_clf, y_pred_clf)
-cm = confusion_matrix(y_test_clf, y_pred_clf)
+print("\n5. ОЦЕНКА КЛАССИФИКАЦИОННЫХ МОДЕЛЕЙ:")
 
-print(f"Точность (Accuracy): {accuracy:.4f}")
-print("Матрица ошибок:")
-print(cm)
+accuracy_logreg = accuracy_score(y_test_clf, y_pred_logreg)
 
-print(f"\nРЕЗУЛЬТАТЫ:")
-print(f"  Регрессия - R²: {r2:.4f}")
-print(f"  Классификация - Accuracy: {accuracy:.4f}")
+accuracy_rf = accuracy_score(y_test_clf, y_pred_rf_clf)
 
-print(f"\nРЕКОМЕНДАЦИИ:")
-if r2 < 0.3:
-    print("Регрессия: низкое качество")
-    print("   - Попробуйте добавить полиномиальные признаки")
-    print("   - Используйте регуляризацию (Ridge, Lasso)")
-elif r2 < 0.6:
-    print("Регрессия: среднее качество")
-    print("   - Можно улучшить подбором гиперпараметров")
+print(f"Логистическая регрессия - Accuracy: {accuracy_logreg:.4f}")
+print(f"Случайный лес - Accuracy: {accuracy_rf:.4f}")
+
+print("\nОТЧЕТ ПО КЛАССИФИКАЦИИ (Случайный лес):")
+print(classification_report(y_test_clf, y_pred_rf_clf))
+
+print("\nАНАЛИЗ КЛАССИФИКАЦИИ:")
+if accuracy_rf < 0.8:
+    print("Результаты можно улучшить:")
+    print("- Балансировка классов")
+    print("- Подбор порога классификации")
+    print("- Использование ансамблевых методов")
 else:
-    print("Регрессия: хорошее качество")
-
-if accuracy < 0.7:
-    print("Классификация: низкая точность")
-    print("   - Попробуйте балансировку классов")
-    print("   - Настройте гиперпараметры модели")
-elif accuracy < 0.85:
-    print("Классификация: средняя точность")
-    print("   - Можно улучшить подбором порога классификации")
-else:
-    print("Классификация: высокая точность")
+    print("Хорошие результаты классификации!")
